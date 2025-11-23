@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Modulo Iscrizione</title>
+<style>
+    canvas {
+  display:block;
+  width:100% !important;
+  height:150px !important; /* <- FIX DEFINITIVO */
+}
+  body{font-family:Arial,system-ui; margin:16px; background:#f7f7f8;}
+  .card{max-width:900px;margin:0 auto;background:#fff;padding:18px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.06);}
+  h1{font-size:20px;margin:0 0 12px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;}
+  label{font-size:13px;margin-top:8px;display:block}
+  input[type=text], input[type=email], input[type=date], input[type=tel], select, textarea{
+    width:100%;padding:8px;border:1px solid #d0d3d8;border-radius:6px;font-size:14px;
+  }
+  .col{flex:1 1 220px;min-width:180px}
+  .full{flex:1 1 100%}
+  .small{flex:0 0 120px}
+  .signature-wrapper{border:1px solid #cfcfcf;border-radius:6px;overflow:hidden;background:#fff}
+  canvas{display:block;width:100%;height:150px;touch-action:none}
+  .muted{font-size:12px;color:#666;margin-top:4px}
+  .buttons{margin-top:14px}
+  button{padding:10px 14px;border-radius:6px;border:0;background:#0b78e3;color:#fff;font-weight:600}
+  .danger{background:#d64545}
+  .inline{display:inline-block;margin-right:8px}
+  .required{color:#c0392b;margin-left:6px}
+  .section-title{margin-top:16px;font-weight:700}
+  .note{font-size:12px;color:#444;margin-top:8px}
+  footer{margin-top:14px;font-size:12px;color:#666}
+</style>
+</head>
+<body>
+<div class="card" >
+  <h1 id="titlePage">Modulo iscrizione “${dichiarazione}"</h1>
+  <p class="muted">Compila i dati seguenti. Tutti i campi obbligatori e gli allegati sono necessari per generare il PDF.</p>
+
+  <form id="regForm" novalidate>
+    <div class="row">
+      <div class="col">
+        <label>Nome <span class="required">*</span></label>
+        <input id="nome" type="text" required>
+      </div>
+      <div class="col">
+        <label>Cognome <span class="required">*</span></label>
+        <input id="cognome" type="text" required>
+      </div>
+    </div>
+
+      <div class="row">
+      <div class="col">
+        <label>Data di nascita <span class="required">*</span></label>
+        <input id="datanascita" type="date" required>
+      </div>
+      <div class="col">
+        <label>Comune di nascita <span class="required">*</span></label>
+        <input id="comuneNascita" type="text" required>
+      </div>
+      <div class="col small">
+        <label>Provincia di nascita <span class="required">*</span></label>
+        <input id="provinciaNascita" type="text" required>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <label>Residente a (Città) <span class="required">*</span></label>
+        <input id="residente_citta" type="text" required>
+      </div>
+      <div class="col small">
+        <label>Provincia <span class="required">*</span></label>
+        <input id="residente_cittaProvincia" type="text" required>
+      </div>
+      <div class="col full">
+        <label>Indirizzo (via, n°) <span class="required">*</span></label>
+        <input id="indirizzo" type="text" required>
+      </div>
+      <div class="col small">
+        <label>Cellulare <span class="required">*</span></label>
+        <input id="cellulare" type="tel" required>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col small">
+        <label>È minorenne? <span class="required">*</span></label>
+        <select id="isMinor" required>
+          <option value="">-- Seleziona --</option>
+          <option value="no">No</option>
+          <option value="si">Sì</option>
+        </select>
+      </div>
+
+      <div class="col">
+        <label>Documento del partecipante (immagine o PDF) Fronte <span class="required">*</span></label>
+        <input id="docPartecipanteF" type="file" accept="image/*,.pdf" required multiple>
+        <div class="muted">Accetta JPG/PNG/PDF. Se carichi un PDF verrà inserita la prima pagina nel PDF di uscita.</div>
+      </div>
+      <div class="col">
+        <label>Documento del partecipante (immagine o PDF) Retro <span class="required">*</span></label>
+        <input id="docPartecipanteR" type="file" accept="image/*,.pdf" required multiple>
+        <div class="muted">Accetta JPG/PNG/PDF. Se carichi un PDF verrà inserita la prima pagina nel PDF di uscita.</div>
+      </div>
+    </div>
+
+    <div id="dichiarazione" style="margin-top:18px; padding:12px; background:#eef6ff; border-left:4px solid #2092ff;">
+        TESTO PARTECIPAZIONE
+      </div>
+      
+      <div class="section-title" style="margin-top:14px;">Firma partecipante</div>
+      <div class="row">
+        <div class="col full">
+          <div class="signature-wrapper"><canvas id="sigParticipant"></canvas></div>
+          <div class="muted">Firma con dito o mouse. Obbligatoria.</div>
+          <div style="margin-top:8px">
+            <button type="button" id="clearSigP" class="inline">Cancella firma partecipante</button>
+            <button type="button" id="previewSigP" class="inline">Anteprima firma</button>
+          </div>
+        </div>
+      </div>
+
+    <!-- Sezione genitore, visibile solo se minorenne -->
+    <div id="parentSection" style="display:none;margin-top:22px;border-top:1px dashed #ddd;padding-top:12px;">
+        <div class="section-title">Genitore / Legale rappresentante (solo se minore)</div>
+      
+        <div class="row">
+          <div class="col">
+            <label>Nome genitore <span class="required">*</span></label>
+            <input id="parentNome" type="text">
+          </div>
+          <div class="col">
+            <label>Cognome genitore <span class="required">*</span></label>
+            <input id="parentCognome" type="text">
+          </div>
+        </div>
+      
+        <div class="row">
+          <div class="col">
+            <label>Data di nascita <span class="required">*</span></label>
+            <input id="parentBirthDate" type="date">
+          </div>
+          <div class="col">
+            <label>Luogo di nascita <span class="required">*</span></label>
+            <input id="parentBirthPlace" type="text">
+          </div>
+          <div class="col small">
+            <label>Provincia di nascita<span class="required">*</span></label>
+            <input id="parentBirthProv" type="text" maxlength="2">
+          </div>
+        </div>
+      
+        <div class="row">
+          <div class="col">
+            <label>Residente a (Città) <span class="required">*</span></label>
+            <input id="parentCity" type="text">
+          </div>
+          <div class="col small">
+            <label>Provincia <span class="required">*</span></label>
+            <input id="parentCityProvincia" type="text">
+          </div>
+          <div class="col full">
+            <label>Indirizzo (via, n°) <span class="required">*</span></label>
+            <input id="parentAddress" type="text">
+          </div>
+          <div class="col small">
+            <label>Cellulare <span class="required">*</span></label>
+            <input id="parentCell" type="tel">
+          </div>
+        </div>
+      
+        <div class="row">
+          <div class="col">
+            <label>Documento genitore (immagine o PDF) Fronte<span class="required">*</span></label>
+            <input id="docParentF" type="file" accept="image/*,.pdf">
+          </div>
+          <div class="col">
+            <label>Documento genitore (immagine o PDF) Retro<span class="required">*</span></label>
+            <input id="docParentR" type="file" accept="image/*,.pdf">
+          </div>
+        </div>
+      
+        <div class="section-title" style="margin-top:14px;">Firma genitore</div>
+        <div class="row">
+          <div class="col full">
+            <div class="signature-wrapper"><canvas id="sigParent"></canvas></div>
+            <div class="muted">Firma con dito o mouse. Obbligatoria se minore.</div>
+            <div style="margin-top:8px">
+              <button type="button" id="clearSigParent" class="inline">Cancella firma genitore</button>
+              <button type="button" id="previewSigParent" class="inline">Anteprima firma</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+
+    <div class="note">
+      Il PDF generato conterrà il testo del modulo (come nel documento Word) con i dati inseriti, le firme e i documenti allegati. Il nome dell'evento verrà inserito come da documento (puoi modificarlo manualmente nel PDF dopo la generazione se vuoi).
+    </div>
+
+    <div class="buttons">
+      <button id="generateBtn" type="button">Genera PDF</button>
+    </div>
+
+    <footer>Documento di riferimento importato: "MODULO ISCRIZIONE OK.docx".</footer>
+  </form>
+</div>
+
+<!-- Librerie: jsPDF + pdf.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+<script>
+/* ---------- Helper: canvas signature (pointer events + DPR) ---------- */
+
+const evento = "EVENTO 2025";
+  const anno = "2025";
+  const dichiarazione = `l’iscrizione a “${evento}”, e dichiaro di essere in possesso della certificazione di idoneità agli sport agonistici e non, per 
+  l’anno ${anno}. Esonero espressamente l’organizzazione della manifestazione per infortuni; mi assumo piena ed esclusiva responsabilità per danni eventualmente
+   a terzi o a beni di proprietà di terzi nel corso della manifestazione. Autorizzo il trattamento, conservazione e utilizzo su tutti i tipi di media e supporto
+    audio/video dei dati sensibili e dei contributi multimediali e cartacei, ai fini analoghi quelli direttamente e indirettamente correlati all’organizzazione 
+    del presente evento e successive edizioni.\n\nAutorizzo infine il trattamento dei dati personali in base art. 13 del D. Lgs. 196/2003.`;
+
+
+function makeSignature(canvasId, clearBtnId, previewBtnId) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  let drawing = false, lastX=0, lastY=0;
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    // if rect has 0 width/height (hidden) don't aggressively resize to 0; keep previous if exists
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(rect.width * dpr));
+    const h = Math.max(1, Math.round(rect.height * dpr));
+    if (canvas.width !== w || canvas.height !== h) {
+      const data = canvas.toDataURL();
+      ctx.setTransform(1,0,0,1,0,0);
+      canvas.width = w; canvas.height = h;
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = rect.height + 'px';
+      ctx.scale(dpr, dpr);
+      if (data && data !== 'data:,') {
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img,0,0,rect.width,rect.height);
+        img.src = data;
+      } else {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+      }
+    }
+  }
+  // initial attempt to resize after small timeout to allow layout
+  window.addEventListener('resize', () => { ctx.setTransform(1,0,0,1,0,0); resize(); });
+  window.addEventListener('load', () => { setTimeout(resize, 50); });
+  setTimeout(resize, 60);
+
+  
+
+
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = (typeof e.clientX === 'number') ? e.clientX : (e.touches && e.touches[0] && e.touches[0].clientX);
+    const clientY = (typeof e.clientY === 'number') ? e.clientY : (e.touches && e.touches[0] && e.touches[0].clientY);
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }
+
+  function down(e) {
+    e.preventDefault();
+    drawing = true;
+    const p = getPos(e);
+    lastX = p.x; lastY = p.y;
+    ctx.beginPath();
+    ctx.lineWidth = 2.5; ctx.lineCap='round'; ctx.strokeStyle = '#000';
+    ctx.moveTo(lastX,lastY);
+    if (e.pointerId) canvas.setPointerCapture(e.pointerId);
+  }
+  function move(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    const p = getPos(e);
+    ctx.lineTo(p.x,p.y); ctx.stroke();
+    lastX = p.x; lastY = p.y;
+  }
+  function up(e) {
+    if (!drawing) return;
+    drawing = false;
+    ctx.closePath();
+    if (e.pointerId) try{ canvas.releasePointerCapture(e.pointerId);}catch{}
+  }
+
+  canvas.addEventListener('pointerdown', down);
+  canvas.addEventListener('pointermove', move);
+  canvas.addEventListener('pointerup', up);
+  canvas.addEventListener('pointercancel', up);
+  canvas.addEventListener('lostpointercapture', up);
+
+  document.getElementById("dichiarazione").innerHTML = `
+    <strong>DICHIARAZIONE DEL PARTECIPANTE</strong><br><br>
+    CHIEDO ${dichiarazione}`;
+
+      document.getElementById("titlePage").innerHTML = `
+    <strong>MODULO ISCRIZIONE ${evento}</strong><br><br>`;
+
+  // Clear button
+  const clearBtn = document.getElementById(clearBtnId);
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      const dpr = window.devicePixelRatio || 1; ctx.scale(dpr,dpr);
+    });
+  }
+  // Preview button
+  const previewBtn = document.getElementById(previewBtnId);
+  if (previewBtn) {
+    previewBtn.addEventListener('click', () => {
+      const data = canvas.toDataURL('image/png');
+      const w = window.open('','_blank'); w.document.write('<img src="'+data+'" style="max-width:100%">');
+    });
+  }
+
+  return {
+    isEmpty: () => {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.round(rect.width * dpr) || canvas.width;
+      const h = Math.round(rect.height * dpr) || canvas.height;
+      try {
+        const data = ctx.getImageData(0,0,w,h).data;
+        for (let i=0;i<data.length;i+=4) { if (data[i+3]!==0) return false; }
+      } catch(e) { /* ignore */ }
+      return true;
+    },
+    toDataURL: (type='image/png', quality=0.92) => canvas.toDataURL(type, quality),
+    resize
+  };
+}
+
+/* ---------- inizializza firme ---------- */
+const sigP = makeSignature('sigParticipant','clearSigP','previewSigP');
+const sigPar = makeSignature('sigParent','clearSigParent','previewSigParent');
+
+/* ---------- gestione visibilità se minorenne (ora ridimensiona il canvas genitore) ---------- */
+const isMinor = document.getElementById('isMinor');
+const parentSection = document.getElementById('parentSection');
+isMinor.addEventListener('change', () => {
+  if (isMinor.value === 'si') {
+    parentSection.style.display = 'block';
+
+    requestAnimationFrame(() => {
+      sigPar.resize();   // <-- resize vero, eseguito dopo il reflow
+    });
+  } else {
+    parentSection.style.display = 'none';
+  }
+});
+
+
+/* ---------- util: file -> dataURL, file->arrayBuffer ---------- */
+function fileToDataURL(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
+function fileToArrayBuffer(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsArrayBuffer(file); }); }
+
+/* ---------- render PDF first page to image using pdf.js ---------- */
+async function pdfFirstPageToDataURL(arrayBuffer, scale=1.5){
+  const loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
+  const pdf = await loadingTask.promise;
+  const page = await pdf.getPage(1);
+  const viewport = page.getViewport({scale});
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.floor(viewport.width);
+  canvas.height = Math.floor(viewport.height);
+  const ctx = canvas.getContext('2d');
+  const renderContext = { canvasContext: ctx, viewport };
+  await page.render(renderContext).promise;
+  return canvas.toDataURL('image/jpeg', 0.85);
+}
+
+/* ---------- helper: get image natural size from dataURL ---------- */
+function getImageSize(dataURL) {
+  return new Promise((res) => {
+    const img = new Image();
+    img.onload = () => res({w: img.naturalWidth, h: img.naturalHeight});
+    img.src = dataURL;
+  });
+}
+
+/* ---------- Validazione e generazione PDF (layout A - pulito e leggibile) ---------- */
+document.getElementById('generateBtn').addEventListener('click', async () => {
+  // VALIDAZIONE dei campi richiesti
+  const get = id => (document.getElementById(id) && document.getElementById(id).value) ? document.getElementById(id).value.trim() : '';
+  const required = ['nome','cognome','datanascita','provinciaNascita','residente_cittaProvincia','indirizzo','cellulare','isMinor'];
+  for (let id of required) {
+    if (!get(id)) { alert('Compila il campo: ' + id); return; }
+  }
+
+  const docFiles = document.getElementById('docPartecipanteF').files;
+  if (!docFiles || docFiles.length===0) { alert('Allega il documento del partecipante (immagine o PDF).'); return; }
+
+  const docFiles1 = document.getElementById('docPartecipanteR').files;
+  if (!docFiles1 || docFiles1.length===0) { alert('Allega il documento del partecipante (immagine o PDF).'); return; }
+
+  if (sigP.isEmpty()) { alert('Firma del partecipante obbligatoria.'); return; }
+
+  const minor = document.getElementById('isMinor').value === 'si';
+  if (minor) {
+    // campi genitore obbligatori
+    const pRequired = [
+      'parentNome','parentCognome','parentBirthPlace','parentBirthProv',
+      'parentBirthDate','parentCity','parentCityProvincia','parentAddress','parentCell'
+    ];
+    for (let id of pRequired) if (!get(id)) { alert('Compila il campo genitore: ' + id); return; }
+    const docP = document.getElementById('docParentF').files;
+    const docP1 = document.getElementById('docParentR').files;
+    if (!docP || docP.length===0 ||!docP1 || docP1.length===0) { alert('Allega il documento del genitore.'); return; }
+    if (sigPar.isEmpty()) { alert('Firma del genitore obbligatoria.'); return; }
+  }
+
+  // Tutto OK -> procedi a generare PDF
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({unit:'mm', format:'a4'});
+  pdf.setProperties({title:'Modulo iscrizione'});
+
+  // Simple, clean layout: label on left (50mm), value on right. Start at y=20mm
+  let xLabel = 15, xValue = 70;
+  let y = 8;
+  pdf.setFontSize(14);
+
+  await addImageLine(null, "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTxkPLNMB6StXtYFkCnkxvha8rBCYQw4gB6Cg&s", {
+  mode: "center",
+  maxHeight: 25
+});
+
+  pdf.setFont('Helvetica', 'bold');
+  pdf.setFontSize(14);
+  pdf.text('MODULO ISCRIZIONE', 105, y, {align:'center'});
+  y += 10;
+
+  pdf.setFont('Helvetica', 'normal');
+  pdf.setFontSize(11);
+  function addLine(label, value, linespace = 7) {
+  pdf.setFont('Helvetica', 'normal');
+  // label a sinistra
+  pdf.text(label, xLabel, y);
+  // valore (se fornito) in grassetto a destra/colonna valore
+  if (value !== undefined && value !== null && value !== '') {
+    pdf.setFont('Helvetica', 'bold');
+    pdf.text(value, xValue, y);
+    pdf.setFont('Helvetica', 'normal');
+  }
+  y += linespace;
+}
+
+function addCenteredLine(text, linespace = 7, font, type) {
+  pdf.setFont('Helvetica', 'bold');
+  pdf.text(text, pdf.internal.pageSize.getWidth() / 2, y, { align: "center" });
+  y += linespace;
+}
+
+function formatDateIT(date) {
+  return new Date(date).toLocaleDateString('it-IT', {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  });
+}
+
+  const oggi = new Date().toLocaleDateString('it-IT', {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric"
+});
+
+  // anagrafica partecipante
+addCenteredLine(`Io sottoscritto/a: ${get("nome")} ${get("cognome")}`,7,'Helvetica','normal');
+addCenteredLine(`Nato/a il: ${formatDateIT(get("datanascita"))} a ${get("comuneNascita")} (${get("provinciaNascita")})`,7,'Helvetica','normal');
+addCenteredLine(`Residente a: ${get("residente_citta")}(${get("residente_cittaProvincia")}) in via ${get("indirizzo")}`,7,'Helvetica','normal');
+addCenteredLine(`Cellulare: ${get("cellulare")}`,7,'Helvetica','normal');
+
+  y += 4;
+  // dichiarazione (dal Word) - mantiene interlinea leggibile
+  pdf.setFontSize(10);
+  pdf.text('CHIEDO', 105, y, {align:'center'});
+  y += 10;
+
+  const split = pdf.splitTextToSize(dichiarazione, 180);
+  pdf.text(split, pdf.internal.pageSize.getWidth() / 2, y, {
+  align: "center"
+});
+  y += (split.length * 5);
+  const split2 = pdf.splitTextToSize('Si allega una copia del documento di riconoscimento del partecipante e del genitore/legale rappresentante in caso di minore', 180);
+  //pdf.text(split2, xLabel, y);
+  pdf.text(split2, pdf.internal.pageSize.getWidth() / 2, y, {
+  align: "center"
+});
+  y += (split2.length * 5) + 6;
+
+  // spazio per Città e firma partecipante
+  addLine(`ROCCALUMERA, lì ${oggi}`);
+  y += 2;
+  pdf.text('Firma partecipante:', xLabel, y);
+  // aggiungi firma immagine
+  const sigPData = sigP.toDataURL();
+  // resize signature box we place: width 60mm keeping aspect ratio roughly
+  pdf.addImage(sigPData, 'PNG', xValue, y - 4, 60, 25);
+  y += 30;
+
+  // Se minorenne, aggiungi sezione genitore completa
+  if (minor) {
+    pdf.setDrawColor(180);
+    pdf.setLineWidth(0.5);
+    pdf.line(15, y, 195, y);
+    y += 6;
+    pdf.setFontSize(12);
+    pdf.setFont("Helvetica", "bold");
+    pdf.text('GENITORE / LEGALE RAPPRESENTANTE', xLabel, y);
+    pdf.setFont("Helvetica", "normal");
+    y += 8;
+    pdf.setFontSize(11);
+    addLine('Nome genitore', get('parentNome'));
+    addLine('Cognome genitore', get('parentCognome'));
+    addLine('Luogo di nascita', `${get("parentBirthPlace")} (${get("parentBirthProv")})`);
+    addLine('Data di nascita', formatDateIT(get('parentBirthDate')));
+    addLine('Residente a', `${get("parentCity")} (${get("parentCityProvincia")})`);
+    addLine('Indirizzo (via, n°)', get('parentAddress'));
+    addLine('Cellulare', get('parentCell'));
+    y += 4;
+    addLine(`Roccalumera, lì ${oggi}`);
+    y += 2;
+    pdf.text('Firma genitore:', xLabel, y);
+    const sigParData = sigPar.toDataURL();
+    pdf.addImage(sigParData, 'PNG', xValue, y - 4, 60, 25);
+    y += 30;
+  }
+
+  // Allegati: nuova pagina, inserisco immagini/PDF convertiti adattandone la larghezza massima
+  await pdf.addPage();
+  pdf.setFontSize(13); pdf.text('Allegati documenti', 15, 18);
+  let attachY = 28;
+  const pageInnerWidthMM = 210 - 30; // margins 15 left/right -> usable width
+  const maxAttachWidthMM = pageInnerWidthMM-80; // let attachments use full width
+
+  async function processFile(file) {
+    if (file.type === 'application/pdf') {
+      const ab = await fileToArrayBuffer(file);
+      return await pdfFirstPageToDataURL(ab, 1.5);
+    } else {
+      return await fileToDataURL(file);
+    }
+  }
+
+
+  async function resizeImage(dataURL, maxWidthPx = 1200) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width;
+      let h = img.height;
+      if (w > maxWidthPx) {
+        const scale = maxWidthPx / w;
+        w = w * scale;
+        h = h * scale;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.8)); // JPEG compressa al 80%
+    };
+    img.src = dataURL;
+  });
+}
+
+async function addImageLine(label, dataURL, options = {}) {
+  const {
+    mode = "center",     // "center" oppure "side"
+    maxHeight = 20,       // larghezza massima immagine
+    linespace = 10,      // spazio sotto la linea
+    xLabel = 15,         // posizione della label quando side
+    xImage = 90          // posizione dell’immagine quando side
+  } = options;
+
+  const size = await getImageSize(dataURL);
+
+  // px → mm (96 dpi)
+  const pxToMm = px => (px / 96) * 25.4;
+
+  let w = pxToMm(size.w);
+  let h = pxToMm(size.h);
+
+  if (h > maxHeight) {
+    const scale = maxHeight / h;
+    w *= scale;
+    h *= scale;
+  }
+
+  const pageW = pdf.internal.pageSize.getWidth();
+
+  // ---------- MODALITÀ CENTRATA ----------
+  if (mode === "center") {
+    const xCenter = (pageW - w) / 2;
+    pdf.addImage(dataURL, "JPEG", xCenter, y, w, h);
+    y += h + linespace;
+    return;
+  }
+
+  // ---------- MODALITÀ DI LATO ----------
+  if (mode === "side") {
+    if (label) {
+      pdf.setFont("Helvetica", "bold");
+      pdf.text(label, xLabel, y + 5); 
+    }
+
+    pdf.addImage(dataURL, "JPEG", xImage, y, w, h);
+    y += h + linespace;
+    return;
+  }
+}
+
+
+
+  // function to add an image nicely scaling by aspect ratio
+  async function addAttachment(dataURL) {
+    const size = await getImageSize(dataURL);
+    // convert px -> mm: assume 96dpi for image pixels -> mm = px / 96 * 25.4
+    const pxToMm = px => (px / 96) * 25.4;
+    const imgWmm = pxToMm(size.w);
+    const imgHmm = pxToMm(size.h);
+    // scale factor to fit maxAttachWidthMM
+    const scale = Math.min(1, maxAttachWidthMM / imgWmm);
+    const w = imgWmm * scale;
+    const h = imgHmm * scale;
+    // if not enough space on page, add new page
+    if (attachY + h > 280) {
+      pdf.addPage();
+      attachY = 20;
+    }
+    const resizedData = await resizeImage(dataURL, 1200);
+    pdf.addImage(resizedData, 'JPEG', 15, attachY, w, h);
+    attachY += h + 8;
+  }
+
+  // Partecipante
+  for (let i=0;i<docFiles.length;i++){
+    const f = docFiles[i];
+    try {
+      const imgData = await processFile(f);
+      await addAttachment(imgData);
+    } catch(e){ console.warn('Errore allegato partecipante', e); }
+  }
+
+  for (let i=0;i<docFiles1.length;i++){
+    const f = docFiles1[i];
+    try {
+      const imgData = await processFile(f);
+      await addAttachment(imgData);
+    } catch(e){ console.warn('Errore allegato partecipante', e); }
+  }
+
+  // Genitore (se minor)
+  if (minor) {
+    const docP = document.getElementById('docParentF').files;
+    const docP1 = document.getElementById('docParentR').files;
+    for (let i=0;i<docP.length;i++){
+      const f = docP[i];
+      try {
+        const imgData = await processFile(f);
+        await addAttachment(imgData);
+      } catch(e){ console.warn('Errore allegato genitore', e); }
+    }
+
+    for (let i=0;i<docP1.length;i++){
+      const f = docP1[i];
+      try {
+        const imgData = await processFile(f);
+        await addAttachment(imgData);
+      } catch(e){ console.warn('Errore allegato genitore', e); }
+    }
+  }
+
+  // Salva
+  const nome = get('nome'), cognome = get('cognome');
+  const filename = `iscrizione_${nome}_${cognome}.pdf`.replace(/\s+/g,'_');
+  pdf.save(filename);
+  alert('PDF generato e scaricato: ' + filename);
+});
+</script>
+</body>
+</html>
