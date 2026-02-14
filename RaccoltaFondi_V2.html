@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donazioni con Effetto Coriandoli</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        /* --- CONFIGURAZIONE COLORI NEUTRI --- */
+        :root {
+            --sfondo-pagina: #f4f4f4;
+            --gradiente-start: #ffffff;
+            --gradiente-end: #d7d7d7;
+            --testo-colore: #222222;
+            --accento-bottone: #2ecc71;
+            --colore-titolo: #444444;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--sfondo-pagina);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .logo-container {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            width: 120px;
+            height: 120px;
+            z-index: 10;
+        }
+        
+        .main-container {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+            z-index: 5; /* Sopra lo sfondo ma sotto eventuali pop-up */
+        }
+
+        .page-title {
+            font-size: 2.2rem;
+            color: var(--colore-titolo);
+            margin: 0;
+            font-weight: 700; 
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .number-box {
+            background: linear-gradient(145deg, var(--gradiente-start), var(--gradiente-end));
+            padding: 60px 90px;
+            border-radius: 40px;
+            min-width: 450px;
+            box-shadow: 20px 20px 60px #bebebe, -20px -20px 60px #ffffff;
+            font-size: 8rem;
+            font-weight: 800;
+            color: var(--testo-colore);
+            line-height: 1;
+            opacity: 0.3;
+            transform: scale(0.95);
+            transition: all 0.8s ease-out;
+        }
+
+        .number-box.active {
+            opacity: 1;
+            transform: scale(1.05);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.12);
+        }
+
+        .reveal-btn {
+            background-color: var(--accento-bottone);
+            color: white;
+            border: none;
+            padding: 22px 55px;
+            font-size: 1.6rem;
+            font-weight: 600;
+            border-radius: 60px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(46, 204, 113, 0.3);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .reveal-btn.fade-out {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.8) translateY(20px);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="logo-container">
+        </div>
+
+    <div class="main-container">
+        <h1 class="page-title">Donazioni ricevute</h1>
+        <div class="number-box" id="display-number">---</div>
+        <button class="reveal-btn" id="start-btn" onclick="startAnimation()">Mostra Risultato</button>
+    </div>
+
+    <audio id="start-sound" src="start.mp3" preload="auto"></audio>
+    <audio id="finish-sound" src="tada.mp3" preload="auto"></audio>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let targetValue = parseInt(urlParams.get('n')) || 1000;
+
+        const displayElement = document.getElementById('display-number');
+        const btnElement = document.getElementById('start-btn');
+        const startAudio = document.getElementById('start-sound');
+        const finishAudio = document.getElementById('finish-sound');
+
+        function formatCurrency(val) {
+            return val.toLocaleString('it-IT') + " €";
+        }
+
+        displayElement.textContent = formatCurrency(0);
+
+        function easeOutQuart(x) {
+            return 1 - Math.pow(1 - x, 4);
+        }
+
+        // Funzione per lanciare i coriandoli
+        function lanciaCoriandoli() {
+            const duration = 3 * 1000; // I coriandoli cadono per 3 secondi
+            const end = Date.now() + duration;
+
+            (function frame() {
+                // Lancio da sinistra
+                confetti({
+                    particleCount: 3,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 },
+                    colors: ['#2ecc71', '#3498db', '#f1c40f', '#e74c3c']
+                });
+                // Lancio da destra
+                confetti({
+                    particleCount: 3,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 },
+                    colors: ['#2ecc71', '#3498db', '#f1c40f', '#e74c3c']
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+        }
+
+        function startAnimation() {
+            if(startAudio) startAudio.play().catch(e => console.warn("Audio avvio non pronto"));
+
+            let baseDuration = (startAudio.duration && !isNaN(startAudio.duration)) 
+                               ? startAudio.duration * 1000 
+                               : 3000;
+
+            let extraPerValue = 0;
+            if (baseDuration < 10000) {
+                extraPerValue = (targetValue / 1000) * 1500;
+            }
+            
+            let finalDuration = Math.min(baseDuration + extraPerValue, 15000);
+
+            btnElement.classList.add('fade-out');
+            displayElement.classList.add('active');
+
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / finalDuration, 1);
+                const easeProgress = easeOutQuart(progress);
+                const currentVal = Math.floor(easeProgress * targetValue);
+                
+                displayElement.textContent = formatCurrency(currentVal);
+
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    displayElement.textContent = formatCurrency(targetValue);
+                    
+                    // --- EVENTO FINALE ---
+                    if(finishAudio) finishAudio.play().catch(e => console.warn("Audio finale non pronto"));
+                    lanciaCoriandoli(); // Esplosione coriandoli!
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+    </script>
+</body>
+</html>
