@@ -227,44 +227,53 @@ const evento = "EVENTO 2025";
 
 function makeSignature(canvasId, clearBtnId, previewBtnId) {
   const canvas = document.getElementById(canvasId);
-  const ctx = canvas.getContext('2d');
+  // willReadFrequently ottimizza il canvas quando si usano metodi come getImageData
+  const ctx = canvas.getContext('2d', { willReadFrequently: true }); 
   let drawing = false, lastX=0, lastY=0;
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
-    // if rect has 0 width/height (hidden) don't aggressively resize to 0; keep previous if exists
+    if (rect.width === 0 || rect.height === 0) return; // Evita calcoli se nascosto
+
     const dpr = window.devicePixelRatio || 1;
     const w = Math.max(1, Math.round(rect.width * dpr));
     const h = Math.max(1, Math.round(rect.height * dpr));
+
     if (canvas.width !== w || canvas.height !== h) {
       const data = canvas.toDataURL();
-      ctx.setTransform(1,0,0,1,0,0);
-      canvas.width = w; canvas.height = h;
-      canvas.style.width = rect.width + 'px';
-      canvas.style.height = rect.height + 'px';
+      
+      canvas.width = w; 
+      canvas.height = h;
+      
+      // Resetta e riapplica la scala corretta
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
+      
       if (data && data !== 'data:,') {
         const img = new Image();
-        img.onload = () => ctx.drawImage(img,0,0,rect.width,rect.height);
+        img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
         img.src = data;
       } else {
-        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
+    } else {
+      // FIX CRITICO: Anche se la dimensione in pixel non è cambiata, 
+      // ci assicuriamo che la matrice di trasformazione sia sempre scalata correttamente.
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
     }
   }
-  // initial attempt to resize after small timeout to allow layout
-  window.addEventListener('resize', () => { ctx.setTransform(1,0,0,1,0,0); resize(); });
+
+  // Rimuoviamo il setTransform prematuro dal listener, se ne occupa la funzione resize()
+  window.addEventListener('resize', resize);
   window.addEventListener('load', () => { setTimeout(resize, 50); });
   setTimeout(resize, 60);
 
-  
-
-
-
   function getPos(e) {
     const rect = canvas.getBoundingClientRect();
-    const clientX = (typeof e.clientX === 'number') ? e.clientX : (e.touches && e.touches[0] && e.touches[0].clientX);
-    const clientY = (typeof e.clientY === 'number') ? e.clientY : (e.touches && e.touches[0] && e.touches[0].clientY);
+    // I PointerEvents forniscono sempre clientX/Y, il fallback sui touches è una sicurezza extra
+    const clientX = e.clientX ?? (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+    const clientY = e.clientY ?? (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
     return { x: clientX - rect.left, y: clientY - rect.top };
   }
 
@@ -272,24 +281,38 @@ function makeSignature(canvasId, clearBtnId, previewBtnId) {
     e.preventDefault();
     drawing = true;
     const p = getPos(e);
-    lastX = p.x; lastY = p.y;
+    lastX = p.x; 
+    lastY = p.y;
+    
     ctx.beginPath();
-    ctx.lineWidth = 2.5; ctx.lineCap='round'; ctx.strokeStyle = '#000';
-    ctx.moveTo(lastX,lastY);
+    ctx.lineWidth = 2.5; 
+    ctx.lineCap = 'round'; 
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#000';
+    ctx.moveTo(lastX, lastY);
+    
+    // traccia un minuscolo segmento per registrare anche un singolo tap (utile per i puntini)
+    ctx.lineTo(lastX + 0.1, lastY); 
+    ctx.stroke();
+    
     if (e.pointerId) canvas.setPointerCapture(e.pointerId);
   }
+  
   function move(e) {
     if (!drawing) return;
     e.preventDefault();
     const p = getPos(e);
-    ctx.lineTo(p.x,p.y); ctx.stroke();
-    lastX = p.x; lastY = p.y;
+    ctx.lineTo(p.x, p.y); 
+    ctx.stroke();
+    lastX = p.x; 
+    lastY = p.y;
   }
+  
   function up(e) {
     if (!drawing) return;
     drawing = false;
     ctx.closePath();
-    if (e.pointerId) try{ canvas.releasePointerCapture(e.pointerId);}catch{}
+    if (e.pointerId) try { canvas.releasePointerCapture(e.pointerId); } catch(err) {}
   }
 
   canvas.addEventListener('pointerdown', down);
@@ -298,28 +321,32 @@ function makeSignature(canvasId, clearBtnId, previewBtnId) {
   canvas.addEventListener('pointercancel', up);
   canvas.addEventListener('lostpointercapture', up);
 
+  // Iniezione testi (mantenuta dal tuo codice originale)
   document.getElementById("dichiarazione").innerHTML = `
     <strong>DICHIARAZIONE DEL PARTECIPANTE</strong><br><br>
     CHIEDO ${dichiarazione}`;
 
-      document.getElementById("titlePage").innerHTML = `
+  document.getElementById("titlePage").innerHTML = `
     <strong>MODULO ISCRIZIONE ${evento}</strong><br><br>`;
 
   // Clear button
   const clearBtn = document.getElementById(clearBtnId);
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
-      ctx.setTransform(1,0,0,1,0,0);
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      const dpr = window.devicePixelRatio || 1; ctx.scale(dpr,dpr);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const dpr = window.devicePixelRatio || 1; 
+      ctx.scale(dpr, dpr);
     });
   }
+  
   // Preview button
   const previewBtn = document.getElementById(previewBtnId);
   if (previewBtn) {
     previewBtn.addEventListener('click', () => {
       const data = canvas.toDataURL('image/png');
-      const w = window.open('','_blank'); w.document.write('<img src="'+data+'" style="max-width:100%">');
+      const w = window.open('','_blank'); 
+      w.document.write('<img src="' + data + '" style="max-width:100%">');
     });
   }
 
@@ -330,16 +357,15 @@ function makeSignature(canvasId, clearBtnId, previewBtnId) {
       const w = Math.round(rect.width * dpr) || canvas.width;
       const h = Math.round(rect.height * dpr) || canvas.height;
       try {
-        const data = ctx.getImageData(0,0,w,h).data;
-        for (let i=0;i<data.length;i+=4) { if (data[i+3]!==0) return false; }
-      } catch(e) { /* ignore */ }
+        const data = ctx.getImageData(0, 0, w, h).data;
+        for (let i = 0; i < data.length; i += 4) { if (data[i+3] !== 0) return false; }
+      } catch(e) { /* ignora errori CORS cross-origin se presenti */ }
       return true;
     },
     toDataURL: (type='image/png', quality=0.92) => canvas.toDataURL(type, quality),
     resize
   };
 }
-
 /* ---------- inizializza firme ---------- */
 const sigP = makeSignature('sigParticipant','clearSigP','previewSigP');
 const sigPar = makeSignature('sigParent','clearSigParent','previewSigParent');
