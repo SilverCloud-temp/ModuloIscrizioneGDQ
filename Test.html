@@ -218,11 +218,10 @@
 
 const evento = "EVENTO 2025";
   const anno = "2025";
-  const dichiarazione = `l’iscrizione a “${evento}”, e dichiaro di essere in possesso della certificazione di idoneità agli sport agonistici e non, per 
-  l’anno ${anno}. Esonero espressamente l’organizzazione della manifestazione per infortuni; mi assumo piena ed esclusiva responsabilità per danni eventualmente
-   a terzi o a beni di proprietà di terzi nel corso della manifestazione. Autorizzo il trattamento, conservazione e utilizzo su tutti i tipi di media e supporto
-    audio/video dei dati sensibili e dei contributi multimediali e cartacei, ai fini analoghi quelli direttamente e indirettamente correlati all’organizzazione 
-    del presente evento e successive edizioni.\n\nAutorizzo infine il trattamento dei dati personali in base art. 13 del D. Lgs. 196/2003.`;
+  const dichiarazione = `l’iscrizione a ${evento} e dichiaro di possedere la certificazione di idoneità sportiva agonistica e/o non agonistica valida per il ${anno}. Dichiaro di aver letto il regolamento dell'evento e di accettarlo nella sua interezza.
+Assumo ogni rischio connesso alla partecipazione e, ai sensi degli artt. 1341-1342 c.c., sollevo l’organizzazione da responsabilità per danni o infortuni. Inoltre, mi assumo ogni responsabilità per eventuali danni a terzi o a beni di terzi.
+Autorizzo l’uso, la conservazione e la diffusione dei miei dati personali e dei materiali audio/video e fotografici prodotti durante l’evento, per finalità legate all’organizzazione dell’evento stesso e di future edizioni.
+Acconsento al trattamento dei dati personali ai sensi degli artt. 13-14 del Regolamento UE 2016/679 (GDPR) e del D.Lgs. 196/2003 come modificato dal D.Lgs. 101/2018.`;
 
 
 function makeSignature(canvasId, clearBtnId, previewBtnId) {
@@ -546,12 +545,10 @@ addCenteredLine(`Cellulare: ${get("cellulare")}`,7,'Helvetica','normal');
     pdf.setFont("Helvetica", "normal");
     y += 8;
     pdf.setFontSize(11);
-    addLine('Nome genitore', get('parentNome'));
-    addLine('Cognome genitore', get('parentCognome'));
+    addLine('Nominativo', `${get('parentNome')} ${get('parentCognome')}` );
     addLine('Luogo di nascita', `${get("parentBirthPlace")} (${get("parentBirthProv")})`);
     addLine('Data di nascita', formatDateIT(get('parentBirthDate')));
-    addLine('Residente a', `${get("parentCity")} (${get("parentCityProvincia")})`);
-    addLine('Indirizzo (via, n°)', get('parentAddress'));
+    addLine('Residente a', `${get("parentCity")} (${get("parentCityProvincia")}), in via ${get('parentAddress')}`);
     addLine('Cellulare', get('parentCell'));
     y += 4;
     addLine(`Roccalumera, lì ${oggi}`);
